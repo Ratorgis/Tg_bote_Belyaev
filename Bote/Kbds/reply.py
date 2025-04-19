@@ -5,11 +5,11 @@ main_kb = ReplyKeyboardMarkup(
     keyboard = [ 
         [
             KeyboardButton(text='Биография'),
-            KeyboardButton(text='Текст Второй')
+            KeyboardButton(text='Карьера')
         ],
         [
-            KeyboardButton(text='Текст Третий'),
-            KeyboardButton(text='Текст Четвертый')
+            KeyboardButton(text='Труды и Награды'),
+            KeyboardButton(text='Достижения и Направления')
         ],
         [
             KeyboardButton(text='Пройти Тест')

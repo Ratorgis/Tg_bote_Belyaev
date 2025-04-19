@@ -10,10 +10,10 @@ user_data = dict()
 
 user_router = Router()
 
-File_1 = ''
-File_2 = ''
-File_3 = ''
-File_4 = ''
+File_1 = '/root/bio.md2'
+File_2 = '/root/car.md2'
+File_3 = '/root/rew.md2'
+File_4 = '/root/sci.md2'
 
 @user_router.message(CommandStart())
 async def get_start(message: Message):
@@ -29,19 +29,19 @@ async def first_text(message: Message):
     await message.answer(file_content)
 
 
-@user_router.message(lambda message: message.text == 'Текст Второй')
+@user_router.message(lambda message: message.text == 'Карьера')
 async def first_text(message: Message):
     with open(File_2, 'r', encoding='utf-8') as file:
         file_content = file.read()
     await message.answer(file_content)
 
-@user_router.message(lambda message: message.text == 'Текст Третий')
+@user_router.message(lambda message: message.text == 'Труды и Награды')
 async def first_text(message: Message):
     with open(File_3, 'r', encoding='utf-8') as file:
         file_content = file.read()
     await message.answer(file_content)
 
-@user_router.message(lambda message: message.text == 'Текст Четвертый')
+@user_router.message(lambda message: message.text == 'Достижения и Направления')
 async def first_text(message: Message):
     with open(File_4, 'r', encoding='utf-8') as file:
         file_content = file.read()
