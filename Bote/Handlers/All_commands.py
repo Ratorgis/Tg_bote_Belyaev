@@ -1,10 +1,7 @@
 from aiogram.types import Message
-from aiogram.types.callback_query import CallbackQuery
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.filters import CommandStart
-import aiogram.utils.markdown as executor
 from Kbds import reply
-import random
 
 user_data = dict()
 
@@ -50,69 +47,58 @@ async def first_text(message: Message):
 @user_router.message(lambda message: message.text == 'Пройти Тест')
 async def first_text(message: Message):
     user_id = message.from_user.id
-    question_data = random.choice(reply.questions)
-    user_data[user_id] = question_data
+
+    user_data[user_id] = {
+        'current_question_index': 0,
+        'correct_answers': 0
+    }
+    question_data = reply.questions[0]
+    keyboard = reply.generate_keyboard(question_data)
+
     await message.answer(
-        text = question_data['question'],
-        reply_markup=reply.generate_question_keyboard(question_data)
+        text=question_data["question"],
+        reply_markup=keyboard
     )
 
-@user_router.callback_query(lambda c: c.data.startswith("answer_"))
-async def process_answer(callback_query: types.CallbackQuery):
+
+@user_router.callback_query(F.data.startswith('answer_'))
+async def handle_answer(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
-    user_data[user_id] = {
-        "remaining_questions": reply.questions.copy(),  
-        "correct_answers": 0,
-        "wrong_answers": 0
-    }
-    await send_next_question(user_id, types.message)
 
-async def send_next_question(user_id, message_or_callback):
-    user = user_data[user_id]
+    user_info = user_data[user_id]
+    current_question_index = user_info["current_question_index"]
+    question_data = reply.questions[current_question_index]
 
-    if not user["remaining_questions"]:
-        correct = user["correct_answers"]
-        wrong = user["wrong_answers"]
-        total = correct + wrong
+    selected_answer_idx = int(callback_query.data.split("_")[1])
+    correct_answer_idx = question_data["correct"]
 
-        await message_or_callback.answer(
-            f"Викторина завершена!\n\n"
-            f"Правильных ответов: {correct}\n"
-            f"Неправильных ответов: {wrong}\n"
-            f"Всего вопросов: {total}"
-        )
-        return
+    if selected_answer_idx == correct_answer_idx:
+        user_info["correct_answers"] += 1
 
-    question_data = user["remaining_questions"].pop(0)
-    user["current_question"] = question_data
+        if current_question_index + 1 < len(reply.questions):
+            user_info["current_question_index"] += 1
+            next_question_data = reply.questions[user_info["current_question_index"]]
+            keyboard = reply.generate_keyboard(next_question_data)
 
-    if isinstance(message_or_callback, types.Message):
-        await message_or_callback.answer(
-            text=question_data["question"],
-            reply_markup = reply.generate_question_keyboard(question_data)
-        )
-    elif isinstance(message_or_callback, CallbackQuery):
-        await message_or_callback.message.edit_text(
-            text=question_data["question"],
-            reply_markup = reply.generate_question_keyboard(question_data)
-        )
+            await callback_query.message.edit_text(
+                text=next_question_data["question"],
+                reply_markup=keyboard
+            )
+        else:
+            await callback_query.message.edit_text(
+                text=f"Тест завершён!\n"
+                     f"Правильных ответов: {user_info['correct_answers']} из {len(reply.questions)}."
+            )
+            del user_data[user_id] 
 
-@user_router.callback_query(lambda c: c.data.startswith("answer_"))
-async def process_answer(callback_query: CallbackQuery):
-    user_id = callback_query.from_user.id
-    user = user_data.get(user_id)
-    question_data = user.get("current_question")
-    if not question_data:
-        await callback_query.answer("Что-то пошло не так. Попробуйте снова.")
-        return
-
-    selected_idx = int(callback_query.data.split("_")[1])
-
-    if selected_idx == question_data["correct"]:
-        user["correct_answers"] += 1
-        await callback_query.answer("Правильно!")
     else:
-        user["wrong_answers"] += 1
-        await callback_query.answer("Неправильно!")
+        correct_answer_text = question_data["answers"][correct_answer_idx]
+        await callback_query.message.edit_text(
+            text=f"Неверно!\n"
+                 f"Правильный ответ: {correct_answer_text}."
+        )
+        del user_data[user_id]  
 
-    await send_next_question(user_id, callback_query)
+    await callback_query.answer()
+
+
